@@ -17,17 +17,33 @@ along with execloop.  If not, see <https://www.gnu.org/licenses/>.
 
 package execloop
 
+import "time"
+
 type Options struct {
-	Logger Logger
+	Logger           Logger
+	SleepBetweenRuns time.Duration
+	ErrorsToTolerate int
 }
 
 func DefaultOptions() Options {
 	return Options{
-		Logger: defaultLog,
+		Logger:           defaultLog,
+		SleepBetweenRuns: time.Second,
+		ErrorsToTolerate: 5,
 	}
 }
 
 func (o Options) WithLogger(logger Logger) Options {
 	o.Logger = logger
+	return o
+}
+
+func (o Options) WithSleepBetweenRuns(sleep time.Duration) Options {
+	o.SleepBetweenRuns = sleep
+	return o
+}
+
+func (o Options) WithErrorsToTolerate(numOfErrors int) Options {
+	o.ErrorsToTolerate = numOfErrors
 	return o
 }
