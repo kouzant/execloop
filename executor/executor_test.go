@@ -19,6 +19,65 @@ const (
 
 const Attempt = Post + 1
 
+type ParentTask struct {
+	DummyTask
+}
+
+func (p *ParentTask) Pre() error {
+	p.tasksLog[0][Pre] += 1
+	return nil
+}
+
+func (p *ParentTask) PerformAction() ([]Task, error) {
+	p.tasksLog[0][Attempt] += 1
+	p.tasksLog[0][PerformAction] += 1
+	var kids []Task
+	kid0 := &KidTask{DummyTask{taskName: "KidTask0", tasksLog: p.tasksLog}}
+	kids = append(kids, kid0)
+	kid1 := &KidTask{DummyTask{taskName: "KidTask1", tasksLog: p.tasksLog}}
+	kids = append(kids, kid1)
+
+	return kids, nil
+}
+
+func (p *ParentTask) Post() error {
+	p.tasksLog[0][Post] += 1
+	return nil
+}
+
+type KidTask struct {
+	DummyTask
+}
+
+func (d *KidTask) Pre() error {
+	d.updateCounter(Pre)
+	return nil
+}
+
+func (d *KidTask) PerformAction() ([]Task, error) {
+	if d.taskName == "KidTask0" {
+		d.tasksLog[1][Attempt] += 1
+	} else if d.taskName == "KidTask1" {
+		d.tasksLog[2][Attempt] += 1
+	}
+	d.updateCounter(PerformAction)
+	var kids []Task
+	return kids, nil
+}
+
+func (d *KidTask) Post() error {
+	d.updateCounter(Post)
+	return nil
+}
+
+func (d *KidTask) updateCounter(action Action) {
+	if d.taskName == "KidTask0" {
+		d.tasksLog[1][action] += 1
+	} else if d.taskName == "KidTask1" {
+		d.tasksLog[2][action] += 1
+	}
+}
+
 type DummyTask struct {
 	taskName    string
 	tasksLog    [][]int
@@ -168,6 +227,21 @@ func (p *FailOneTaskPlan) Create() ([]Task, error) {
 			taskName: "DummyTask2",
 			tasksLog: p.tasksLog,
 		}
+		tasks = append(tasks, t)
+	}
+	return tasks, nil
+}
+
+type ChildrenPlan struct {
+	tasksLog [][]int
+}
+
+func (p *ChildrenPlan) Create() ([]Task, error) {
+	var tasks []Task
+	if p.tasksLog[0][PerformAction] == 0 {
+		t := &ParentTask{
+			DummyTask{taskName: "ParentTask0",
+				tasksLog: p.tasksLog}}
 		tasks = append(tasks, t)
 	}
 	return tasks, nil
@@ -328,4 +402,37 @@ func TestFailMultipleTimesGivingUpPlan(t *testing.T) {
 	require.Equal(t, 1, plan.tasksLog[2][Post])
 
 	require.Equal(t, 4, plan.failures)
+}
+
+func TestChildrenPlan(t *testing.T) {
+	var tasksLog = [][]int{
+		{0, 0, 0, 0},
+		{0, 0, 0, 0},
+		{0, 0, 0, 0},
+	}
+	plan := &ChildrenPlan{tasksLog: tasksLog}
+	opts := execloop.DefaultOptions().WithSleepBetweenRuns(50 * time.Millisecond)
+	exec := New(&opts)
+	err := exec.Run(plan)
+	if err != nil {
+		t.Errorf("Did not expect error but gotten :%v\n", err)
+	}
+
+	// All tasks should have exactly one attempt
+	require.Equal(t, 1, plan.tasksLog[0][Attempt])
+	require.Equal(t, 1, plan.tasksLog[1][Attempt])
+	require.Equal(t, 1, plan.tasksLog[2][Attempt])
+
+	// All tasks should have exactly one Pre, PerformAction and Post
+	require.Equal(t, 1, plan.tasksLog[0][Pre])
+	require.Equal(t, 1, plan.tasksLog[1][Pre])
+	require.Equal(t, 1, plan.tasksLog[2][Pre])
+
+	require.Equal(t, 1, plan.tasksLog[0][PerformAction])
+	require.Equal(t, 1, plan.tasksLog[1][PerformAction])
+	require.Equal(t, 1, plan.tasksLog[2][PerformAction])
+
+	require.Equal(t, 1, plan.tasksLog[0][Post])
+	require.Equal(t, 1, plan.tasksLog[1][Post])
+	require.Equal(t, 1, plan.tasksLog[2][Post])
 }
