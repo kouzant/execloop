@@ -2,6 +2,7 @@ package executor
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/kouzant/execloop"
@@ -34,7 +35,7 @@ func (e *Executor) Run(plan Plan) error {
 		e.options.Debugf("Tasks remaining: %d\n", len(tasks))
 		err = e.execute(tasks)
 		if err != nil {
-			e.options.Errorf("%s. Reason %s", err, errors.Unwrap(err))
+			e.options.Errorf("%s. Reason: %s", err, errors.Unwrap(err))
 			return err
 		}
 
@@ -46,24 +47,29 @@ func (e *Executor) execute(tasks []Task) error {
 	for _, task := range tasks {
 		e.options.Infof("Executing Task: %s\n", task.Name())
 		e.options.Debugf("Executing Pre of Task: %s\n", task.Name())
-		err := task.Pre()
-		err = e.handleTaskError(err)
-		if err != nil {
-			return err
+		prerr := task.Pre()
+		ferr := e.handleTaskError(prerr)
+		if ferr != nil {
+			return ferr
 		}
 
-		e.options.Debugf("Executing PerfomAction of Task: %s\n", task.Name())
-		err = task.PerformAction()
-		err = e.handleTaskError(err)
-		if err != nil {
-			return err
-		}
+		if prerr == nil {
+			e.options.Debugf("Executing PerfomAction of Task: %s\n", task.Name())
+			paerr := task.PerformAction()
+			ferr = e.handleTaskError(paerr)
+			if ferr != nil {
+				return ferr
+			}
 
-		e.options.Debugf("Executing Post of Task: %s\n", task.Name())
-		err = task.Post()
-		err = e.handleTaskError(err)
-		if err != nil {
-			return err
+			if paerr == nil {
+				e.options.Debugf("Executing Post of Task: %s\n", task.Name())
+				poerr := task.Post()
+				ferr = e.handleTaskError(poerr)
+				if ferr != nil {
+					return ferr
+				}
+				e.options.Infof("Finished executing Task: %s\n", task.Name())
+			}
 		}
 	}
 	return nil
@@ -73,9 +79,11 @@ func (e *Executor) handleTaskError(err error) error {
 	if err == nil {
 		return nil
 	}
+	e.options.Warningf("%s\n", err)
 	e.numberOfErrors++
 	if e.numberOfErrors > e.options.ErrorsToTolerate {
-		return &FatalError{"Reached maximum number of errors to tolerate", err}
+		return &FatalError{fmt.Sprintf("Reached maximum number of errors to tolerate %d", e.options.ErrorsToTolerate),
+			err}
 	}
 	if errors.As(err, &fatalError) {
 		return err
