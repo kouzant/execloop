@@ -30,7 +30,7 @@ func (d *DummyTask) Pre() error {
 	return nil
 }
 
-func (d *DummyTask) PerformAction() error {
+func (d *DummyTask) PerformAction() ([]Task, error) {
 	if d.taskName == "DummyTask0" {
 		d.tasksLog[0][Attempt] += 1
 	} else if d.taskName == "DummyTask1" {
@@ -40,15 +40,16 @@ func (d *DummyTask) PerformAction() error {
 	}
 
 	if d.shouldIFail == 1 {
-		return &FatalError{"Something terrible has happened", nil}
+		return nil, &FatalError{"Something terrible has happened", nil}
 	}
 
 	if d.shouldIFail == 2 {
-		return errors.New("A small tiny error")
+		return nil, errors.New("A small tiny error")
 	}
 
 	d.updateCounter(PerformAction)
-	return nil
+	var children []Task
+	return children, nil
 }
 
 func (d *DummyTask) Post() error {

@@ -4,7 +4,7 @@ import "fmt"
 
 type Task interface {
 	Pre() error
-	PerformAction() error
+	PerformAction() ([]Task, error)
 	Post() error
 	Name() string
 }

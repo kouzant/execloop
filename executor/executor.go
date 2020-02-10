@@ -55,7 +55,7 @@ func (e *Executor) execute(tasks []Task) error {
 
 		if prerr == nil {
 			e.options.Debugf("Executing PerfomAction of Task: %s\n", task.Name())
-			paerr := task.PerformAction()
+			childrenTasks, paerr := task.PerformAction()
 			ferr = e.handleTaskError(paerr)
 			if ferr != nil {
 				return ferr
@@ -69,6 +69,13 @@ func (e *Executor) execute(tasks []Task) error {
 					return ferr
 				}
 				e.options.Infof("Finished executing Task: %s\n", task.Name())
+				if poerr == nil && childrenTasks != nil && len(childrenTasks) > 0 {
+					e.options.Debugf("Executig children tasks of %s\n", task.Name())
+					inerr := e.execute(childrenTasks)
+					if ferr = e.handleTaskError(inerr); ferr != nil {
+						return ferr
+					}
+				}
 			}
 		}
 	}
