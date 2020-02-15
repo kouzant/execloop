@@ -12,8 +12,8 @@ test-no-cache:
 	@go test -count=1 ./...
 	
 .PHONY: build
-build: test
-	@echo "Building binary in ${BIN_DIR}"
+build:
+	@echo "Building library in ${BIN_DIR}"
 	@go vet -c=3 ./...
 	@GOOS=linux GOARCH=amd64 go build -v -o ${BIN_DIR}/execloop
 
