@@ -21,12 +21,14 @@ action.
 
 Your `Task` implementation should comply with the following interface:
 
-    type Task interface {
-	    Pre() error
-	    PerformAction() ([]Task, error)
-	    Post() error
-	    Name() string
-    }
+```go
+type Task interface {
+	Pre() error
+	PerformAction() ([]Task, error)
+	Post() error
+	Name() string
+}
+```
 
 ### Plan
 
@@ -41,9 +43,11 @@ empy slice of `Tasks` meaning the final state has been reached.
 
 A `Plan` should implement the follwing interface:
 
-    type Plan interface {
-	    Create() ([]Task, error)
-    }
+```go
+type Plan interface {
+	Create() ([]Task, error)
+}
+```
 
 ### Executor
 
@@ -54,12 +58,14 @@ execute a plan. The latter will timeout after a configurable period of time.
 Call `executor.New(options *execloop.Options) *Executor` to create a new
 scheduler. The `Options` are the following:
 
-    type Options struct {
-	    Logger           Logger
-	    SleepBetweenRuns time.Duration
-	    ErrorsToTolerate int
-	    ExecutionTimeout time.Duration
-    }
+```go
+type Options struct {
+	Logger           Logger
+	SleepBetweenRuns time.Duration
+	ErrorsToTolerate int
+	ExecutionTimeout time.Duration
+}
+```
 
 Use the `With*` functions to override the default options obtained by `execloop.DefaultOptions()`
 
