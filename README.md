@@ -66,6 +66,9 @@ Use the `With*` functions to override the default options obtained by `execloop.
 ## Development
 
 `make` to build and test
+
 `make test` to run the tests
+
 `test-no-cache` to run all tests with no cache
+
 `make build` to build the library
