@@ -76,4 +76,4 @@ func (l *defaultLogger) Errorf(f string, v ...interface{}) {
 	l.Printf("ERROR: "+f, v...)
 }
 
-var defaultLog = &defaultLogger{log.New(os.Stdout, "execloop", log.LstdFlags)}
+var defaultLog = &defaultLogger{log.New(os.Stdout, "execloop-", log.LstdFlags)}
