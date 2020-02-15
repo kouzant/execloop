@@ -23,6 +23,7 @@ type Options struct {
 	Logger           Logger
 	SleepBetweenRuns time.Duration
 	ErrorsToTolerate int
+	ExecutionTimeout time.Duration
 }
 
 func DefaultOptions() Options {
@@ -30,6 +31,7 @@ func DefaultOptions() Options {
 		Logger:           defaultLog,
 		SleepBetweenRuns: time.Second,
 		ErrorsToTolerate: 5,
+		ExecutionTimeout: 20 * time.Minute,
 	}
 }
 
@@ -45,5 +47,10 @@ func (o Options) WithSleepBetweenRuns(sleep time.Duration) Options {
 
 func (o Options) WithErrorsToTolerate(numOfErrors int) Options {
 	o.ErrorsToTolerate = numOfErrors
+	return o
+}
+
+func (o Options) WithExecutionTimeout(timeout time.Duration) Options {
+	o.ExecutionTimeout = timeout
 	return o
 }

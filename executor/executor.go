@@ -17,6 +17,7 @@ along with execloop.  If not, see <https://www.gnu.org/licenses/>.
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -38,7 +39,30 @@ func New(options *execloop.Options) *Executor {
 	}
 }
 
+func (e *Executor) RunWithContext(ctx context.Context, plan Plan) error {
+	e.options.Debugf("Running with context")
+	execCtx, cancel := context.WithTimeout(ctx, e.options.ExecutionTimeout)
+	defer cancel()
+
+	controlChannel := make(chan error)
+	go func() {
+		controlChannel <- e.run(plan)
+	}()
+
+	select {
+	case <-execCtx.Done():
+		return execCtx.Err()
+	case controlResponse := <-controlChannel:
+		return controlResponse
+	}
+}
+
 func (e *Executor) Run(plan Plan) error {
+	e.options.Debugf("Running without context")
+	return e.run(plan)
+}
+
+func (e *Executor) run(plan Plan) error {
 	for {
 		tasks, err := plan.Create()
 		if err != nil {

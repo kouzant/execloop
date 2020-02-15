@@ -17,6 +17,7 @@ along with execloop.  If not, see <https://www.gnu.org/licenses/>.
 package executor
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -263,6 +264,31 @@ func (p *ChildrenPlan) Create() ([]Task, error) {
 	return tasks, nil
 }
 
+type SleepyTask struct {
+	Sleep time.Duration
+	DummyTask
+}
+
+func (s *SleepyTask) PerformAction() ([]Task, error) {
+	time.Sleep(s.Sleep)
+	var tasks []Task
+	return tasks, nil
+}
+
+type SleepyPlan struct {
+	TaskSleep time.Duration
+}
+
+func (s *SleepyPlan) Create() ([]Task, error) {
+	var tasks []Task
+	// We should always check if task has been executed
+	// and skip adding it to the tasks.
+	// In this case it's OK as the executor will timeout
+	t := &SleepyTask{Sleep: s.TaskSleep}
+	tasks = append(tasks, t)
+	return tasks, nil
+}
+
 func TestSuccessExecutor(t *testing.T) {
 	var tasksLog = [][]int{
 		{0, 0, 0, 0},
@@ -272,7 +298,7 @@ func TestSuccessExecutor(t *testing.T) {
 	plan := &SuccessPlan{tasksLog: tasksLog}
 	opts := execloop.DefaultOptions().WithSleepBetweenRuns(50 * time.Millisecond)
 	exec := New(&opts)
-	err := exec.Run(plan)
+	err := exec.RunWithContext(context.Background(), plan)
 	if err != nil {
 		t.Errorf("Did not expect error but gotten :%v\n", err)
 	}
@@ -451,4 +477,13 @@ func TestChildrenPlan(t *testing.T) {
 	require.Equal(t, 1, plan.tasksLog[0][Post])
 	require.Equal(t, 1, plan.tasksLog[1][Post])
 	require.Equal(t, 1, plan.tasksLog[2][Post])
+}
+
+func TestExecutorTimeout(t *testing.T) {
+	plan := &SleepyPlan{1 * time.Second}
+	opts := execloop.DefaultOptions().WithExecutionTimeout(700 * time.Millisecond)
+	exec := New(&opts)
+	err := exec.RunWithContext(context.Background(), plan)
+	require.NotNil(t, err)
+	require.Equal(t, err, context.DeadlineExceeded)
 }
